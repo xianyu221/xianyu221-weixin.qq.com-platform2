@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>视频号·助手</title>
+<style>
+/* ===== 全局重置：清除外边距/内边距，统一采用 border-box 盒模型（宽度计算包含边框和内边距） ===== */
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===== 页面基础样式：优先使用系统中文字体；网页背景改为浅灰色（用户提供的色样），与白色侧边栏形成层次 ===== */
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:#f7f7f7}
+/* ===== 侧边栏容器：fixed 固定左侧，宽 272px，flex 纵向布局；无内边距无外边框，缩进交给菜单项自身的外边距 ===== */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:272px;background:#fff;display:flex;flex-direction:column;padding:0}
+/* ===== Logo 头部区：外层 272×120（内边距 56/28/32），内部 Logo 行 216×32，与原站检查值一致 ===== */
+.logo-wrap{margin:0;height:120px;padding:56px 28px 32px;display:flex;align-items:center}
+/* ===== Logo 行：flex 横向排列，间距 8px（原站 brand-name 的 margin-left:8px），垂直居中 ===== */
+.logo{display:flex;align-items:center;gap:8px}
+/* ===== Logo 图标：27×23 与原站 use 元素（26.67×23.06）一致，object-fit 防止拉伸变形 ===== */
+.logo img{width:27px;height:23px;display:block;object-fit:contain}
+
+/* ===== Logo 文字：20px 原站字号，font-weight 用有效值 500（433 会被归入最接近的标准字重），颜色 #000000E6 ===== */
+.logo .name{font-size:20px;line-height:20px;font-weight:500;color:rgba(0,0,0,.9);letter-spacing:.5px}
+
+
+
+/* ===== 菜单列表：紧跟 120px 头部区之后；原站 li 逐项 56px 紧密堆叠，项与项之间无间隔 ===== */
+.menu{display:flex;flex-direction:column}
+/* ===== 菜单项通用样式（对应原站 a.finder-ui-desktop-menu__link）：240×56，外边距 0 16px，内边距 16px（16+24+16=56），10px 圆角带过渡动画 ===== */
+.mi{display:flex;align-items:center;height:56px;margin:0 16px;padding:16px;border-radius:10px;cursor:pointer;color:#3d3d3d;font-size:15px;text-decoration:none;transition:background .18s,color .18s;user-select:none}
+/* ===== 菜单项悬停态：浅灰背景提示可点击 ===== */
+.mi:hover{background:#f6f6f6}
+/* ===== 菜单项图标：20px，flex:none 防止被压缩，与文字间隔 13px，object-fit 保持比例 ===== */
+.mi .ic{width:20px;height:20px;flex:none;margin-right:13px;object-fit:contain}
+/* ===== 菜单项文字：flex:1 占满剩余宽度把箭头推到最右边，字号/颜色由 .menu .txt 按原站值控制 ===== */
+.mi .txt{flex:1;font-weight:500}
+
+/* ===== 下拉箭头：16px 浅灰，宽度固定，旋转动画 0.2s ===== */
+.mi .arr{width:21px;height:21px;flex:none;color:#c3c3c3;transition:transform .2s}
+/* ===== 选中项（首页）：高度随通用项 56px（原站所有 li 均为 56），浅橙渐变背景 + 橙色文字 ===== */
+.mi.active{background:linear-gradient(180deg,#fff7e8,#fdeecf);color:#ea9130;font-weight:500}
+
+/* ===== 选中项图标同步变为橙色 ===== */
+.mi.active .ic{color:#ea9130}
+/* ===== 带子菜单的项展开时：箭头旋转 180° 变为朝上 ===== */
+.mi.sub.open .arr{transform:rotate(180deg)}
+/* ===== 子菜单容器：max-height 动画展开收起，0 时隐藏、open 时撑开 ===== */
+.sub-list{overflow:hidden;max-height:0;transition:max-height .25s ease}
+.sub-list.open{max-height:420px}
+/* ===== 子菜单项：高 56 与主项一致，文字对齐父项文字（16 外边距+49 内边距=65px 起点），无图标 ===== */
+.si{display:flex;align-items:center;height:56px;margin:0 16px;padding:0 16px 0 49px;border-radius:10px;cursor:pointer;font-size:15px;color:#3d3d3d;user-select:none;transition:background .18s}
+/* ===== 子菜单项悬停态 ===== */
+.si:hover{background:#f6f6f6}
+/* ===== 子菜单项选中态：原站为浅灰背景（非橙色），文字加深 ===== */
+.si.active{background:#f5f5f5;color:rgba(0,0,0,.9);font-weight:500}
+/* ===== 通知角标：红色胶囊形状，白色 11px 小字，全圆角 ===== */
+.badge{background:#fa5151;color:#fff;font-size:11px;line-height:1;padding:4px 7px;border-radius:99px;font-weight:400}
+/* ===== 底部账号头像占位：26px 圆形，径向渐变模拟粉色动漫头像（可换成真实图片） ===== */
+.avatar{width:26px;height:26px;border-radius:50%;flex:none;margin-right:13px;background:radial-gradient(circle at 35% 30%,#ffe1e9,#f2a9bc)}
+/* ===== 弹性占位：flex:1 撑开菜单区与底部区之间的空白 ===== */
+.spacer{flex:1}
+/* ===== 底部区域（单独的导航条）：按原站检查值还原 272×152，内边距 16px（四周统一），白色背景，顶部浅灰分割线 ===== */
+.bottom{margin:0;height:152px;padding:16px;background:#fff;border-top:1px solid #ececec;display:flex;flex-direction:column;gap:6px}
+/* ===== 底部菜单项：flex:1 均分剩余高度，每项 (152-32-6)/2 ≈ 57px，与原站 footer 两项等高分布一致 ===== */
+.bottom .mi{flex:1}
+.menu .txt{ font-size:17px; font-family: "微软雅黑", bold, sans-serif;font-weight:500;}
+
+/* ===== 右侧内容区：让出 272px 侧边栏；container-center 按原站检查值 1288 宽、32px 左右内边距（margin auto 在 1653px 视口下即左右 46.5px） ===== */
+.content{margin-left:272px;padding:48px 0 0}
+.container-center{width:1288px;margin:0 auto;padding:0 32px}
+/* ===== 通用白卡片：12px 圆角 ===== */
+.card{background:#fff;border-radius:12px}
+/* ===== 顶部双卡行：资料卡+通知卡等宽并排，间距 24px，下方留 24px ===== */
+.top-row{display:flex;gap:24px;margin-bottom:24px}
+.profile-card{flex:1;padding:26px 28px;display:flex;align-items:center;gap:16px}
+.p-avatar{width:60px;height:60px;border-radius:50%;flex:none;background:radial-gradient(circle at 35% 30%,#ffe1e9,#f2a9bc)}
+.p-name{font-size:18px;font-weight:600;color:rgba(0,0,0,.9)}
+.p-company{display:flex;align-items:center;gap:5px;font-size:13px;color:#5a5a5a;margin-top:7px}
+.p-id{display:flex;align-items:center;gap:5px;font-size:13px;color:#9a9a9a;margin-top:7px}
+.p-stats{font-size:14px;color:#333;margin-top:12px}
+.p-stats b{font-weight:600;margin-left:5px}
+.p-stats .gp{margin-left:26px}
+.vf{width:14px;height:14px}
+.ii{width:14px;height:14px}
+.notice-card{flex:1;padding:20px 28px;display:flex;flex-direction:column;justify-content:center;gap:18px}
+.n-row{display:flex;align-items:center;gap:10px;font-size:14px;color:#333;cursor:pointer}
+.n-row .dot{width:4px;height:4px;border-radius:50%;background:#c9c9c9;flex:none}
+.n-row .date{margin-left:auto;font-size:13px;color:#9a9a9a}
+/* ===== 昨日数据卡：四列等宽居中，标签小字灰色+数值 30px 大字 ===== */
+.data-card{padding:28px 32px 38px;margin-bottom:24px}
+.data-title{display:flex;align-items:center;gap:6px;font-size:17px;font-weight:600;color:rgba(0,0,0,.9)}
+.data-title svg{width:15px;height:15px}
+.data-grid{display:grid;grid-template-columns:repeat(4,1fr);margin-top:30px}
+.data-item{text-align:center}
+.data-item .lb{display:flex;align-items:center;justify-content:center;gap:4px;font-size:13px;color:#8a8a8a}
+.data-item .lb svg{width:13px;height:13px}
+.data-item .val{font-size:30px;color:rgba(0,0,0,.9);margin-top:14px}
+/* ===== 最近视频卡：页签带黑色下划线，右侧橙色渐变按钮，卡体高留白 ===== */
+.video-card{padding:0 32px;min-height:430px}
+.v-head{display:flex;align-items:flex-end;gap:32px;padding:28px 0 0;border-bottom:1px solid #f2f2f2}
+.v-tab{font-size:15px;color:#9a9a9a;cursor:pointer;position:relative;padding-bottom:16px}
+.v-tab.active{color:rgba(0,0,0,.9);font-weight:600}
+.v-tab.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;background:#1a1a1a;border-radius:2px}
+.v-btn{margin-left:auto;background:linear-gradient(90deg,#ffa640,#fb8c2c);color:#fff;font-size:14px;padding:9px 22px;border-radius:8px;border:none;cursor:pointer;margin-bottom:16px}
+.v-item{display:flex;gap:14px;margin-top:26px;cursor:pointer}
+.v-thumb{width:112px;height:78px;border-radius:8px;flex:none;background:linear-gradient(135deg,#3a4440,#232a27)}
+.v-date{font-size:14px;color:#333}
+.v-stats{display:flex;align-items:center;gap:16px;margin-top:14px;font-size:13px;color:#9a9a9a}
+.v-stats .s{display:flex;align-items:center;gap:5px}
+.v-stats svg{width:15px;height:15px}
+.v-all{display:inline-flex;align-items:center;gap:3px;font-size:14px;color:#5a5a5a;margin-top:22px;cursor:pointer}
+.v-all svg{width:13px;height:13px}
+/* ===== 页脚：左侧链接、右侧版权 ===== */
+.page-footer{display:flex;align-items:center;padding:30px 0 34px;font-size:13px;color:#9a9a9a}
+.f-links{display:flex;gap:36px}
+.f-links a{color:#9a9a9a;cursor:pointer}
+.f-copy{margin-left:auto}
+
+/* ==================== 右侧内容区 ==================== */
+/* ===== 内容区容器：左边让出 272px 固定侧边栏的宽度，顶部留白 48px ===== */
+.content{margin-left:272px;padding:48px 0 0}
+/* ===== 居中容器：按原站检查值 1288px 宽、水平自动居中、左右内边距 32px ===== */
+.container-center{width:1288px;margin:0 auto;padding:0 32px}
+/* ===== 卡片通用：白底 + 12px 圆角（背景靠 body 的浅灰衬托出卡片层次） ===== */
+.card{background:#fff;border-radius:12px}
+/* ===== 顶部一行：资料卡与通知卡并排，间距 24px，行下留 24px ===== */
+.top-row{display:flex;gap:24px;margin-bottom:24px}
+/* ===== 资料卡：头像 + 名称/公司/ID/统计 横向排列，flex:1 与通知卡等宽 ===== */
+.profile-card{flex:1;padding:26px 28px;display:flex;align-items:center;gap:16px}
+/* ===== 账号头像：60px 圆形，径向渐变占位（可换成真实图片） ===== */
+.p-avatar{width:60px;height:60px;border-radius:50%;flex:none;background:radial-gradient(circle at 35% 30%,#ffe1e9,#f2a9bc)}
+/* ===== 账号名称：18px 加粗黑字 ===== */
+.p-name{font-size:18px;font-weight:600;color:rgba(0,0,0,.9)}
+/* ===== 公司名一行：13px 灰字 + 蓝V认证小图标 ===== */
+.p-company{display:flex;align-items:center;gap:5px;font-size:13px;color:#5a5a5a;margin-top:7px}
+/* ===== 视频号ID一行：13px 浅灰 + 复制小图标 ===== */
+.p-id{display:flex;align-items:center;gap:5px;font-size:13px;color:#9a9a9a;margin-top:7px}
+/* ===== 统计行：视频/关注者数字，b 加粗数字，gp 控制两组间距 ===== */
+.p-stats{font-size:14px;color:#333;margin-top:12px}
+.p-stats b{font-weight:600;margin-left:5px}
+.p-stats .gp{margin-left:26px}
+/* ===== 蓝V/复制图标尺寸 ===== */
+.vf{width:14px;height:14px}
+.ii{width:14px;height:14px}
+/* ===== 通知卡：纵向排列通知行，justify-content:center 垂直居中 ===== */
+.notice-card{flex:1;padding:20px 28px;display:flex;flex-direction:column;justify-content:center;gap:18px}
+/* ===== 单条通知：灰圆点 + 文字，日期用 margin-left:auto 推到最右 ===== */
+.n-row{display:flex;align-items:center;gap:10px;font-size:14px;color:#333;cursor:pointer}
+.n-row .dot{width:4px;height:4px;border-radius:50%;background:#c9c9c9;flex:none}
+.n-row .date{margin-left:auto;font-size:13px;color:#9a9a9a}
+/* ===== 昨日数据卡：标题 + 四列网格 ===== */
+.data-card{padding:28px 32px 38px;margin-bottom:24px}
+.data-title{display:flex;align-items:center;gap:6px;font-size:17px;font-weight:600;color:rgba(0,0,0,.9)}
+.data-title svg{width:15px;height:15px}
+/* ===== 四列均分：grid-template-columns:repeat(4,1fr) ===== */
+.data-grid{display:grid;grid-template-columns:repeat(4,1fr);margin-top:30px}
+.data-item{text-align:center}
+.data-item .lb{display:flex;align-items:center;justify-content:center;gap:4px;font-size:13px;color:#8a8a8a}
+.data-item .lb svg{width:13px;height:13px}
+/* ===== 数据数值：30px 大字，与标签间距 14px ===== */
+.data-item .val{font-size:30px;color:rgba(0,0,0,.9);margin-top:14px}
+/* ===== 最近视频卡：内边距左右 32px 上下为 0（由页签区自己撑出） ===== */
+.video-card{padding:0 32px;min-height:430px}
+/* ===== 页签行：align-items:flex-end 让页签贴住底部边框线 ===== */
+.v-head{display:flex;align-items:flex-end;gap:32px;padding:28px 0 0;border-bottom:1px solid #f2f2f2}
+/* ===== 页签：默认灰字，选中黑字加粗 ===== */
+.v-tab{font-size:15px;color:#9a9a9a;cursor:pointer;position:relative;padding-bottom:16px}
+.v-tab.active{color:rgba(0,0,0,.9);font-weight:600}
+/* ===== 选中页签的黑色下划线：::after 伪元素，压在边框线上（bottom:-1px） ===== */
+.v-tab.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;background:#1a1a1a;border-radius:2px}
+/* ===== 发表视频按钮：橙色渐变，margin-left:auto 推到最右 ===== */
+.v-btn{margin-left:auto;background:linear-gradient(90deg,#ffa640,#fb8c2c);color:#fff;font-size:14px;padding:9px 22px;border-radius:8px;border:none;cursor:pointer;margin-bottom:16px}
+/* ===== 视频条目：缩略图 + 日期/数据 横向排列 ===== */
+.v-item{display:flex;gap:14px;margin-top:26px;cursor:pointer}
+/* ===== 缩略图占位：112×78 圆角，深色渐变模拟视频封面 ===== */
+.v-thumb{width:112px;height:78px;border-radius:8px;flex:none;background:linear-gradient(135deg,#3a4440,#232a27)}
+.v-date{font-size:14px;color:#333}
+/* ===== 播放/点赞/评论/转发/推荐 数据行：15px 小图标 + 数字 ===== */
+.v-stats{display:flex;align-items:center;gap:16px;margin-top:14px;font-size:13px;color:#9a9a9a}
+.v-stats .s{display:flex;align-items:center;gap:5px}
+.v-stats svg{width:15px;height:15px}
+/* ===== 全部视频入口：文字 + 右箭头 ===== */
+.v-all{display:inline-flex;align-items:center;gap:3px;font-size:14px;color:#5a5a5a;margin-top:22px;cursor:pointer}
+.v-all svg{width:13px;height:13px}
+/* ===== 页脚：左侧链接横排，版权 margin-left:auto 靠右 ===== */
+.page-footer{display:flex;align-items:center;padding:30px 0 34px;font-size:13px;color:#9a9a9a}
+.f-links{display:flex;gap:36px}
+.f-links a{color:#9a9a9a;cursor:pointer}
+.f-copy{margin-left:auto}
+</style>
+</head>
+<body>
+<aside class="sidebar" >
+
+ <div class="logo-wrap">
+    <div class="logo">
+      <img src="素材/01_视频号logo.png" alt="视频号">
+      <span class="name">视频号 · 助手</span>
+    </div>
+  </div>
+
+  <nav class="menu">
+    <a class="mi active">
+      <img class="ic" src="素材/02_首页_房子.png" alt="">
+      <span class="txt">首页</span>
+    </a>
+    <a class="mi sub">
+      <img class="ic" src="素材/03_内容管理_播放框.png" alt="">
+      <span class="txt">内容管理</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </a>
+    <div class="sub-list">
+      <a class="si">视频</a>
+      <a class="si active">图文</a>
+      <a class="si">音乐</a>
+      <a class="si">音频</a>
+      <a class="si">草稿箱</a>
+      <a class="si">主页</a>
+      <a class="si">活动</a>
+    </div>
+    <a class="mi sub">
+      <img class="ic" src="素材/04_互动管理_气泡.png" alt="">
+      <span class="txt">互动管理</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </a>
+    <div class="sub-list">
+      <a class="si active">评论</a>
+      <a class="si">弹幕</a>
+      <a class="si">私信</a>
+    </div>
+    <a class="mi sub">
+      <img class="ic" src="素材/05_直播_靶心.png" alt="">
+      <span class="txt">直播</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </a>
+    <div class="sub-list">
+      <a class="si">直播管理</a>
+      <a class="si">直播商品管理</a>
+      <a class="si">直播收入</a>
+      <a class="si">直播预告</a>
+      <a class="si">直播回放</a>
+    </div>
+    <a class="mi sub">
+      <img class="ic" src="素材/06_收入与服务_人民币.png" alt="">
+      <span class="txt">收入与服务</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </a>
+    <div class="sub-list">
+      <a class="si">收入权益</a>
+      <a class="si">原创保护记录</a>
+      <a class="si">加热工具</a>
+      <a class="si">剧集管理</a>
+    </div>
+    <a class="mi">
+      <img class="ic" src="素材/07_带货中心_帽子.png" alt="">
+      <span class="txt">带货中心</span>
+    </a>
+    <a class="mi sub">
+      <img class="ic" src="素材/08_数据中心_柱状图.png" alt="">
+      <span class="txt">数据中心</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </a>
+    <div class="sub-list">
+      <a class="si">关注者数据</a>
+      <a class="si">视频数据</a>
+      <a class="si active">图文数据</a>
+      <a class="si">直播数据</a>
+      <a class="si">带货数据</a>
+    </div>
+    <a class="mi sub">
+      <img class="ic" src="素材/09_设置_齿轮.png" alt="">
+      <span class="txt">设置</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </a>
+    <div class="sub-list">
+      <a class="si active">人员设置</a>
+      <a class="si">自营账户管理</a>
+      <a class="si">肖像授权管理</a>
+    </div>
+  </nav>
+  <div class="spacer"></div>
+  <div class="bottom">
+    <a class="mi">
+      <img class="ic" src="素材/10_通知中心_铃铛.png" alt="">
+      <span class="txt">通知中心</span>
+      <span class="badge">202</span>
+    </a>
+    <a class="mi">
+      <span class="avatar"></span>
+      <span class="txt">柚子月漫剧</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+    </a>
+  </div>
+</aside>
+
+<main class="content">
+  <div class="container-center">
+
+    <div class="top-row">
+      <div class="card profile-card">
+        <span class="p-avatar"></span>
+        <div>
+          <div class="p-name">柚子月漫剧</div>
+          <div class="p-company">
+            <svg class="vf" viewBox="0 0 24 24" fill="#4c84ff"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3z"/></svg>
+            长沙里手影视传媒有限公司
+          </div>
+          <div class="p-id">
+            视频号ID:sphosOYeaEsagoQu
+            <svg class="ii" viewBox="0 0 24 24" fill="none" stroke="#9a9a9a" stroke-width="1.6"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+          </div>
+          <div class="p-stats">视频<b>1</b><span class="gp">关注者<b>1</b></span></div>
+        </div>
+      </div>
+      <div class="card notice-card">
+        <div class="n-row"><span class="dot"></span>自营账户授权通知<span class="date">11月5日</span></div>
+        <div class="n-row"><span class="dot"></span>组件管理员绑定邀请<span class="date">11月4日</span></div>
+        <div class="n-row"><span class="dot"></span>认证通过通知<span class="date">11月3日</span></div>
+      </div>
+    </div>
+
+    <div class="card data-card">
+      <div class="data-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>
+        昨日关键数据
+      </div>
+      <div class="data-grid">
+        <div class="data-item"><div class="lb">净增关注</div><div class="val">0</div></div>
+        <div class="data-item"><div class="lb">新增播放</div><div class="val">0</div></div>
+        <div class="data-item"><div class="lb">新增♡</div><div class="val">0</div></div>
+        <div class="data-item"><div class="lb">新增评论</div><div class="val">0</div></div>
+      </div>
+    </div>
+
+    <div class="card video-card">
+      <div class="v-head">
+        <span class="v-tab active">最近视频</span>
+        <span class="v-tab">最近图文</span>
+        <button class="v-btn">发表视频</button>
+      </div>
+      <div class="v-item">
+        <div class="v-thumb"></div>
+        <div>
+          <div class="v-date">2026年11月17日 09:14</div>
+          <div class="v-stats">
+            <span class="s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>1</span>
+            <span class="s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21C7 16.5 3 13.3 3 9.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 9 2.5c0 3.8-4 7-9 11.5z"/></svg>0</span>
+            <span class="s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>0</span>
+            <span class="s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 3v13M7 8l5-5 5 5"/></svg>0</span>
+            <span class="s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 9V5l7 7-7 7v-4H4V9h10z"/></svg>0</span>
+          </div>
+        </div>
+      </div>
+      <span class="v-all">全部视频 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="9 6 15 12 9 18"/></svg></span>
+    </div>
+
+    <div class="page-footer">
+      <div class="f-links">
+        <a>关于腾讯</a>
+        <a>微信视频号运营规范</a>
+        <a>问题咨询</a>
+      </div>
+      <span class="f-copy">© 1998-2026 Tencent Inc. All Rights Reserved.</span>
+    </div>
+
+  </div>
+</main>
+
+<script>
+var mainItems=document.querySelectorAll('.menu > .mi');
+mainItems.forEach(function(item){
+  item.addEventListener('click',function(){
+    if(item.classList.contains('sub')){
+      item.classList.toggle('open');
+      var sl=item.nextElementSibling;
+      if(sl&&sl.classList.contains('sub-list')){sl.classList.toggle('open')}
+    }else{
+      mainItems.forEach(function(i){i.classList.remove('active')});
+      item.classList.add('active');
+    }
+  });
+});
+document.querySelectorAll('.sub-list .si').forEach(function(si){
+  si.addEventListener('click',function(){
+    document.querySelectorAll('.sub-list .si').forEach(function(s){s.classList.remove('active')});
+    si.classList.add('active');
+    mainItems.forEach(function(i){i.classList.remove('active')});
+  });
+});
+</script>
+</body>
+</html>

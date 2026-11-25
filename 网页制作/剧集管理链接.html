@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>剧集管理 - 视频号·助手</title>
+<style>
+/* ===== 全局重置：清除外边距/内边距，统一 border-box 盒模型 ===== */
+*{margin:0;padding:0;box-sizing:border-box}
+/* ===== 页面基础字体与浅灰背景（与主页一致） ===== */
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:#f7f7f7}
+/* ===== 侧边栏：fixed 固定左侧 272px，白色，flex 纵向布局 ===== */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:272px;background:#fff;display:flex;flex-direction:column;padding:0}
+/* ===== Logo 头部区：272×120，内边距 56/28/32 与原站一致 ===== */
+.logo-wrap{margin:0;height:120px;padding:56px 28px 32px;display:flex;align-items:center}
+/* ===== Logo 行：横向排列，间距 8px ===== */
+.logo{display:flex;align-items:center;gap:8px}
+/* ===== Logo 图标：27×23 防拉伸 ===== */
+.logo img{width:27px;height:23px;display:block;object-fit:contain}
+/* ===== Logo 文字：20px 黑字 ===== */
+.logo .name{font-size:20px;line-height:20px;font-weight:500;color:rgba(0,0,0,.9);letter-spacing:.5px}
+/* ===== 菜单列表：56px 逐项堆叠 ===== */
+.menu{display:flex;flex-direction:column}
+/* ===== 菜单项通用：240×56，外边距 0 16px，内边距 16px，10px 圆角 ===== */
+.mi{display:flex;align-items:center;height:56px;margin:0 16px;padding:16px;border-radius:10px;cursor:pointer;color:#3d3d3d;font-size:15px;text-decoration:none;transition:background .18s,color .18s;user-select:none}
+/* ===== 菜单项悬停：浅灰背景 ===== */
+.mi:hover{background:#f6f6f6}
+/* ===== 菜单图标：20px，与文字间隔 13px ===== */
+.mi .ic{width:20px;height:20px;flex:none;margin-right:13px;object-fit:contain}
+/* ===== 菜单文字：flex:1 把箭头推到最右 ===== */
+.mi .txt{flex:1;font-weight:500}
+/* ===== 隐藏单选钮：管橙色选中互斥 ===== */
+.nr{display:none}
+/* ===== 原生收展开关 summary：去默认三角，整行可点 ===== */
+summary{list-style:none;cursor:pointer}
+summary::-webkit-details-marker{display:none}
+/* ===== 下拉箭头：21px 浅灰，旋转动画 ===== */
+.mi .arr{width:21px;height:21px;flex:none;color:#c3c3c3;transition:transform .2s}
+/* ===== 主项被 radio 选中：橙色渐变背景 + 橙色文字（本页默认无主项选中） ===== */
+.mi:has(.nr:checked){background:linear-gradient(180deg,#fff7e8,#fdeecf);color:#ea9130;font-weight:500}
+.mi:has(.nr:checked) .ic{color:#ea9130}
+/* ===== 展开的分组：箭头朝上（注意：本页展开的父项保持白底，橙色只给子项） ===== */
+details[open] .arr{transform:rotate(180deg)}
+/* ===== 子菜单项：高 56，文字缩进对齐父项文字 ===== */
+.si{display:flex;align-items:center;height:56px;margin:0 16px;padding:0 16px 0 49px;border-radius:10px;cursor:pointer;font-size:15px;color:#3d3d3d;user-select:none;transition:background .18s}
+/* ===== 子菜单项悬停：浅灰 ===== */
+.si:hover{background:#f6f6f6}
+/* ===== 子菜单项选中（radio 勾选）：橙色渐变 + 橙字（本页默认「剧集管理」选中） ===== */
+.si:has(.nr:checked){background:linear-gradient(180deg,#fff7e8,#fdeecf);color:#ea9130;font-weight:500}
+/* ===== 通知角标：红色胶囊白字 ===== */
+.badge{background:#fa5151;color:#fff;font-size:11px;line-height:1;padding:4px 7px;border-radius:99px;font-weight:400}
+/* ===== 底部账号头像：26px 圆形浅灰占位（柚静剧场） ===== */
+.avatar{width:26px;height:26px;border-radius:50%;flex:none;margin-right:13px;background:linear-gradient(135deg,#f2f2f2,#d9d9d9)}
+/* ===== 弹性占位：把底部区推到最下 ===== */
+.spacer{flex:1}
+/* ===== 底部区域：272×152，白色，顶部浅灰分割线 ===== */
+.bottom{margin:0;height:152px;padding:16px;background:#fff;border-top:1px solid #ececec;display:flex;flex-direction:column;gap:6px}
+/* ===== 底部菜单项：flex:1 均分高度 ===== */
+.bottom .mi{flex:1}
+/* ===== 菜单文字：17px 微软雅黑（与主页统一） ===== */
+.menu .txt{font-size:17px;font-family:"微软雅黑",sans-serif;font-weight:500}
+
+/* ==================== 右侧内容区：剧集管理页 ==================== */
+/* ===== 内容区：左边让出 272px 侧边栏 ===== */
+.content{margin-left:272px;padding:28px 0 40px}
+/* ===== 居中容器：1288px 宽，水平居中 ===== */
+.container-center{width:1288px;margin:0 auto;padding:0 32px}
+/* ===== 页面大标题：18px 加粗黑字 ===== */
+.pg-title{font-size:18px;font-weight:600;color:rgba(0,0,0,.9)}
+/* ===== 页签行：flex 底对齐，右侧「使用指南」推到最右 ===== */
+.pg-tabs{display:flex;align-items:flex-end;gap:28px;margin-top:16px}
+/* ===== 页签默认：灰字，留出下划线空间 ===== */
+.ptab{position:relative;padding-bottom:12px;font-size:15px;color:#5a5a5a;cursor:pointer;text-decoration:none}
+/* ===== 当前页签：黑字加粗 ===== */
+.ptab.active{color:rgba(0,0,0,.9);font-weight:600}
+/* ===== 当前页签黑色下划线：::after 压在底部 ===== */
+.ptab.active::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:#1a1a1a;border-radius:2px}
+/* ===== 使用指南：蓝字靠右 ===== */
+.guide{margin-left:auto;color:#4c84ff;font-size:14px;cursor:pointer}
+/* ===== 列表卡片：白底 12px 圆角 ===== */
+.list-card{background:#fff;border-radius:12px;margin-top:20px;padding:24px 24px 10px}
+/* ===== 卡片头行：标题 + 上架按钮两端分布 ===== */
+.lc-head{display:flex;align-items:center}
+/* ===== 卡片标题：剧集列表 (21) ===== */
+.lc-title{font-size:16px;font-weight:600;color:rgba(0,0,0,.9)}
+/* ===== 上架剧集按钮：浅灰底灰字（未启用状态样式） ===== */
+.up-btn{margin-left:auto;background:#ececec;color:#9a9a9a;font-size:13px;padding:8px 14px;border-radius:6px;border:none;cursor:pointer}
+/* ===== 筛选行：搜索框 + 状态下拉，间距 12px ===== */
+.filters{display:flex;gap:12px;margin-top:18px}
+/* ===== 搜索框外壳：定位放大镜图标 ===== */
+.search{position:relative;width:220px}
+/* ===== 搜索输入框：36px 高，浅灰描边圆角 ===== */
+.search input{width:100%;height:36px;border:1px solid #e5e5e5;border-radius:8px;padding:0 34px 0 12px;font-size:13px;color:#333;outline:none;background:#fff}
+/* ===== 搜索框占位文字颜色 ===== */
+.search input::placeholder{color:#b5b5b5}
+/* ===== 放大镜图标：绝对定位在输入框右侧 ===== */
+.search svg{position:absolute;right:10px;top:9px;width:17px;height:17px;color:#b5b5b5}
+/* ===== 状态下拉：36px 高描边框，文字与箭头两端分布 ===== */
+.select{width:150px;height:36px;border:1px solid #e5e5e5;border-radius:8px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:13px;color:#5a5a5a;cursor:pointer}
+/* ===== 下拉小箭头 ===== */
+.select svg{width:14px;height:14px;color:#9a9a9a}
+/* ===== 表头/行共用网格：6 列宽度配比（名称列最宽，操作列靠右） ===== */
+.thead,.trow{display:grid;grid-template-columns:2.4fr 1fr 1.2fr 1.4fr 1.2fr 1fr;align-items:center}
+/* ===== 表头：44px 高灰字 ===== */
+.thead{height:44px;font-size:13px;color:#8a8a8a}
+/* ===== 表头居中列 ===== */
+.th-c{text-align:center}
+/* ===== 表头右对齐列（操作） ===== */
+.th-r{text-align:right}
+/* ===== 数据行：上下留白 14px，浅灰分割线 ===== */
+.trow{padding:14px 0;border-bottom:1px solid #f2f2f2}
+/* ===== 最后一行去分割线 ===== */
+.trow:last-child{border-bottom:none}
+/* ===== 剧集单元格：海报 + 剧名 横向排列 ===== */
+.d-cell{display:flex;align-items:center;gap:12px}
+/* ===== 海报缩略图：44×58 竖版，深色渐变模拟剧照 ===== */
+.poster{width:44px;height:58px;border-radius:4px;flex:none;background:linear-gradient(135deg,#413a35,#1c1713);display:flex;align-items:center;justify-content:center;overflow:hidden}
+/* ===== 海报文字：白色 9px 剧名 ===== */
+.poster span{color:#fff;font-size:9px;line-height:1.3;text-align:center;padding:0 3px;opacity:.92}
+/* ===== 剧名文字：14px 深灰 ===== */
+.d-name{font-size:14px;color:#333}
+/* ===== 表格居中列通用：13px ===== */
+.c{text-align:center;font-size:13px;color:#3d3d3d}
+/* ===== 状态徽标：图标 + 文字横排，居中 ===== */
+.st{display:inline-flex;align-items:center;gap:4px;font-size:13px;vertical-align:middle}
+/* ===== 失败状态：红色 ===== */
+.st.bad{color:#fa5151}
+/* ===== 状态图标 14px ===== */
+.st svg{width:14px;height:14px}
+/* ===== 已下架：普通深灰无图标 ===== */
+.st.off{color:#3d3d3d}
+/* ===== 操作列：蓝色链接右对齐，间距 14px ===== */
+.ops{display:flex;gap:14px;justify-content:flex-end}
+/* ===== 操作链接样式 ===== */
+.ops span{color:#4c84ff;font-size:13px;cursor:pointer}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo-wrap">
+    <div class="logo">
+      <img src="素材/01_视频号logo.png" alt="视频号">
+      <span class="name">视频号 · 助手</span>
+    </div>
+  </div>
+
+  <nav class="menu">
+    <a class="mi" href="视频号.html">
+      <img class="ic" src="素材/02_首页_房子.png" alt="">
+      <span class="txt">首页</span>
+    </a>
+    <details class="grp" name="sec">
+    <summary class="mi sub">
+      <img class="ic" src="素材/03_内容管理_播放框.png" alt="">
+      <span class="txt">内容管理</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="sub-list">
+      <label class="si"><input class="nr" type="radio" name="nav">视频</label>
+      <label class="si"><input class="nr" type="radio" name="nav">图文</label>
+      <label class="si"><input class="nr" type="radio" name="nav">音乐</label>
+      <label class="si"><input class="nr" type="radio" name="nav">音频</label>
+      <label class="si"><input class="nr" type="radio" name="nav">草稿箱</label>
+      <label class="si"><input class="nr" type="radio" name="nav">主页</label>
+      <label class="si"><input class="nr" type="radio" name="nav">活动</label>
+    </div>
+    </details>
+    <details class="grp" name="sec">
+    <summary class="mi sub">
+      <img class="ic" src="素材/04_互动管理_气泡.png" alt="">
+      <span class="txt">互动管理</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="sub-list">
+      <label class="si"><input class="nr" type="radio" name="nav">评论</label>
+      <label class="si"><input class="nr" type="radio" name="nav">弹幕</label>
+      <label class="si"><input class="nr" type="radio" name="nav">私信</label>
+    </div>
+    </details>
+    <details class="grp" name="sec">
+    <summary class="mi sub">
+      <img class="ic" src="素材/05_直播_靶心.png" alt="">
+      <span class="txt">直播</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="sub-list">
+      <label class="si"><input class="nr" type="radio" name="nav">直播管理</label>
+      <label class="si"><input class="nr" type="radio" name="nav">直播商品管理</label>
+      <label class="si"><input class="nr" type="radio" name="nav">直播收入</label>
+      <label class="si"><input class="nr" type="radio" name="nav">直播预告</label>
+      <label class="si"><input class="nr" type="radio" name="nav">直播回放</label>
+    </div>
+    </details>
+    <details class="grp" name="sec" open>
+    <summary class="mi sub">
+      <img class="ic" src="素材/06_收入与服务_人民币.png" alt="">
+      <span class="txt">收入与服务</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="sub-list">
+      <label class="si"><input class="nr" type="radio" name="nav">收入权益</label>
+      <label class="si"><input class="nr" type="radio" name="nav">原创保护记录</label>
+      <label class="si"><input class="nr" type="radio" name="nav">加热工具</label>
+      <label class="si"><input class="nr" type="radio" name="nav" checked>剧集管理</label>
+    </div>
+    </details>
+    <label class="mi">
+      <input class="nr" type="radio" name="nav">
+      <img class="ic" src="素材/07_带货中心_帽子.png" alt="">
+      <span class="txt">带货中心</span>
+    </label>
+    <details class="grp" name="sec">
+    <summary class="mi sub">
+      <img class="ic" src="素材/08_数据中心_柱状图.png" alt="">
+      <span class="txt">数据中心</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="sub-list">
+      <label class="si"><input class="nr" type="radio" name="nav">关注者数据</label>
+      <label class="si"><input class="nr" type="radio" name="nav">视频数据</label>
+      <label class="si"><input class="nr" type="radio" name="nav">图文数据</label>
+      <label class="si"><input class="nr" type="radio" name="nav">直播数据</label>
+      <label class="si"><input class="nr" type="radio" name="nav">带货数据</label>
+    </div>
+    </details>
+    <details class="grp" name="sec">
+    <summary class="mi sub">
+      <img class="ic" src="素材/09_设置_齿轮.png" alt="">
+      <span class="txt">设置</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="sub-list">
+      <label class="si"><input class="nr" type="radio" name="nav">人员设置</label>
+      <label class="si"><input class="nr" type="radio" name="nav">自营账户管理</label>
+      <label class="si"><input class="nr" type="radio" name="nav">肖像授权管理</label>
+    </div>
+    </details>
+  </nav>
+  <div class="spacer"></div>
+  <div class="bottom">
+    <label class="mi">
+      <input class="nr" type="radio" name="nav">
+      <img class="ic" src="素材/10_通知中心_铃铛.png" alt="">
+      <span class="txt">通知中心</span>
+      <span class="badge">202</span>
+    </label>
+    <label class="mi">
+      <input class="nr" type="radio" name="nav">
+      <span class="avatar"></span>
+      <span class="txt">柚静剧场</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+    </label>
+  </div>
+</aside>
+
+<main class="content">
+  <div class="container-center">
+
+    <div class="pg-title">剧集管理</div>
+    <div class="pg-tabs">
+      <span class="ptab active">剧集发表</span>
+      <a class="ptab" href="剧集管理/数据概览.html">数据概览</a>
+      <span class="ptab">收入详情</span>
+      <span class="guide">使用指南</span>
+    </div>
+
+    <div class="list-card">
+      <div class="lc-head">
+        <span class="lc-title">剧集列表 (21)</span>
+        <button class="up-btn">上架剧集</button>
+      </div>
+      <div class="filters">
+        <div class="search">
+          <input type="text" placeholder="搜索剧名">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        </div>
+        <div class="select">全部状态 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+      </div>
+
+      <div class="thead">
+        <span>剧集名称</span><span class="th-c">视频数</span><span class="th-c">变现类型</span><span class="th-c">上架时间</span><span class="th-c">状态</span><span class="th-r">操作</span>
+      </div>
+
+      <div class="trow">
+        <div class="d-cell"><div class="poster"><span>每天都要活泼第2季</span></div><span class="d-name">每天都要活泼第2季</span></div>
+        <span class="c">200</span><span class="c">IAA 广告变现</span><span class="c">2026年11月16日</span>
+        <span class="c"><span class="st bad"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fa5151" stroke-width="1.6"/><path d="M12 7v6" stroke="#fa5151" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.4" r="1" fill="#fa5151"/></svg>版权审核失败</span></span>
+        <div class="ops"><span>置顶</span><span>管理</span></div>
+      </div>
+
+      <div class="trow">
+        <div class="d-cell"><div class="poster"><span>每天都很逗</span></div><span class="d-name">每天都很逗</span></div>
+        <span class="c">200</span><span class="c">IAA 广告变现</span><span class="c">2026年11月16日</span>
+        <span class="c"><span class="st off">已下架</span></span>
+        <div class="ops"><span>上架</span><span>置顶</span><span>管理</span></div>
+      </div>
+
+      <div class="trow">
+        <div class="d-cell"><div class="poster"><span>每天赚一亿</span></div><span class="d-name">每天赚一亿</span></div>
+        <span class="c">200</span><span class="c">IAA 广告变现</span><span class="c">2026年11月14日</span>
+        <span class="c"><span class="st bad"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fa5151" stroke-width="1.6"/><path d="M12 7v6" stroke="#fa5151" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.4" r="1" fill="#fa5151"/></svg>版权审核失败</span></span>
+        <div class="ops"><span>置顶</span><span>管理</span></div>
+      </div>
+
+      <div class="trow">
+        <div class="d-cell"><div class="poster"><span>穿书后我疯狂洗白第4季</span></div><span class="d-name">穿书后我疯狂洗白第4季</span></div>
+        <span class="c">136</span><span class="c">IAA 广告变现</span><span class="c">2026年11月14日</span>
+        <span class="c"><span class="st off">已下架</span></span>
+        <div class="ops"><span>上架</span><span>置顶</span><span>管理</span></div>
+      </div>
+
+      <div class="trow">
+        <div class="d-cell"><div class="poster"><span>穿书后我疯狂洗白第2季</span></div><span class="d-name">穿书后我疯狂洗白第2季</span></div>
+        <span class="c">300</span><span class="c">IAA 广告变现</span><span class="c">2026年11月14日</span>
+        <span class="c"><span class="st off">已下架</span></span>
+        <div class="ops"><span>上架</span><span>置顶</span><span>管理</span></div>
+      </div>
+
+      <div class="trow">
+        <div class="d-cell"><div class="poster"><span>穿书后我疯狂洗白3</span></div><span class="d-name">穿书后我疯狂洗白3</span></div>
+        <span class="c">300</span><span class="c">IAA 广告变现</span><span class="c">2026年11月14日</span>
+        <span class="c"><span class="st off">已下架</span></span>
+        <div class="ops"><span>上架</span><span>置顶</span><span>管理</span></div>
+      </div>
+
+      <div class="trow">
+        <div class="d-cell"><div class="poster"><span>穿书后我疯狂洗白2</span></div><span class="d-name">穿书后我疯狂洗白2</span></div>
+        <span class="c">300</span><span class="c">IAA 广告变现</span><span class="c">2026年11月10日</span>
+        <span class="c"><span class="st bad"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fa5151" stroke-width="1.6"/><path d="M12 7v6" stroke="#fa5151" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.4" r="1" fill="#fa5151"/></svg>版权审核失败</span></span>
+        <div class="ops"><span>置顶</span><span>管理</span></div>
+      </div>
+
+      <div class="trow">
+        <div class="d-cell"><div class="poster"><span>穿书后我疯狂洗白</span></div><span class="d-name">穿书后我疯狂洗白</span></div>
+        <span class="c">200</span><span class="c">IAA 广告变现</span><span class="c">2026年11月10日</span>
+        <span class="c"><span class="st bad"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fa5151" stroke-width="1.6"/><path d="M12 7v6" stroke="#fa5151" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.4" r="1" fill="#fa5151"/></svg>审核失败</span></span>
+        <div class="ops"><span>置顶</span><span>管理</span></div>
+      </div>
+
+      <div class="trow">
+        <div class="d-cell"><div class="poster"><span>我萌霸主她有秘诀</span></div><span class="d-name">我萌霸主她有秘诀</span></div>
+        <span class="c">57</span><span class="c">IAA 广告变现</span><span class="c">2026年11月06日</span>
+        <span class="c"><span class="st bad"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fa5151" stroke-width="1.6"/><path d="M12 7v6" stroke="#fa5151" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.4" r="1" fill="#fa5151"/></svg>版权审核失败</span></span>
+        <div class="ops"><span>置顶</span><span>管理</span></div>
+      </div>
+
+      <div class="trow">
+        <div class="d-cell"><div class="poster"><span>重生遇事:~难事~恼人</span></div><span class="d-name">重生遇事:~难事~恼人</span></div>
+        <span class="c">100</span><span class="c">IAA 广告变现</span><span class="c">2026年11月05日</span>
+        <span class="c"><span class="st bad"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fa5151" stroke-width="1.6"/><path d="M12 7v6" stroke="#fa5151" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.4" r="1" fill="#fa5151"/></svg>版权审核失败</span></span>
+        <div class="ops"><span>置顶</span><span>管理</span></div>
+      </div>
+
+    </div>
+
+  </div>
+</main>
+</body>
+</html>

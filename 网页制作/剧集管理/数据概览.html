@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据概览 - 视频号·助手</title>
+<style>
+/* ===== 全局重置 + border-box 盒模型 ===== */
+*{margin:0;padding:0;box-sizing:border-box}
+/* ===== 页面字体与浅灰背景（与主页一致） ===== */
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:#f7f7f7}
+/* ===== 侧边栏：固定左侧 272px 白色纵向 ===== */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:272px;background:#fff;display:flex;flex-direction:column;padding:0}
+/* ===== Logo 头部区 272×120 ===== */
+.logo-wrap{margin:0;height:120px;padding:56px 28px 32px;display:flex;align-items:center}
+.logo{display:flex;align-items:center;gap:8px}
+.logo img{width:27px;height:23px;display:block;object-fit:contain}
+.logo .name{font-size:20px;line-height:20px;font-weight:500;color:rgba(0,0,0,.9);letter-spacing:.5px}
+/* ===== 菜单列表与菜单项通用（与主页一致） ===== */
+.menu{display:flex;flex-direction:column}
+.mi{display:flex;align-items:center;height:56px;margin:0 16px;padding:16px;border-radius:10px;cursor:pointer;color:#3d3d3d;font-size:15px;text-decoration:none;transition:background .18s,color .18s;user-select:none}
+.mi:hover{background:#f6f6f6}
+.mi .ic{width:20px;height:20px;flex:none;margin-right:13px;object-fit:contain}
+.mi .txt{flex:1;font-weight:500}
+/* ===== 隐藏单选钮：橙色选中互斥 ===== */
+.nr{display:none}
+/* ===== 原生收展开关 summary：去默认三角 ===== */
+summary{list-style:none;cursor:pointer}
+summary::-webkit-details-marker{display:none}
+/* ===== 下拉箭头 21px 浅灰 ===== */
+.mi .arr{width:21px;height:21px;flex:none;color:#c3c3c3;transition:transform .2s}
+/* ===== 主项被选中：橙色渐变（本页默认无主项选中） ===== */
+.mi:has(.nr:checked){background:linear-gradient(180deg,#fff7e8,#fdeecf);color:#ea9130;font-weight:500}
+.mi:has(.nr:checked) .ic{color:#ea9130}
+/* ===== 展开的分组：箭头朝上（父项保持白底，橙色只给子项，与截图一致） ===== */
+details[open] .arr{transform:rotate(180deg)}
+/* ===== 子菜单项：高 56，文字缩进对齐父项 ===== */
+.si{display:flex;align-items:center;height:56px;margin:0 16px;padding:0 16px 0 49px;border-radius:10px;cursor:pointer;font-size:15px;color:#3d3d3d;user-select:none;transition:background .18s;text-decoration:none}
+.si:hover{background:#f6f6f6}
+/* ===== 子菜单项选中：橙色（本页默认「剧集管理」） ===== */
+.si:has(.nr:checked){background:linear-gradient(180deg,#fff7e8,#fdeecf);color:#ea9130;font-weight:500}
+/* ===== 通知角标 ===== */
+.badge{background:#fa5151;color:#fff;font-size:11px;line-height:1;padding:4px 7px;border-radius:99px;font-weight:400}
+/* ===== 底部账号头像占位 ===== */
+.avatar{width:26px;height:26px;border-radius:50%;flex:none;margin-right:13px;background:linear-gradient(135deg,#f2f2f2,#d9d9d9)}
+/* ===== 弹性占位 + 底部区域 272×152 ===== */
+.spacer{flex:1}
+.bottom{margin:0;height:152px;padding:16px;background:#fff;border-top:1px solid #ececec;display:flex;flex-direction:column;gap:6px}
+.bottom .mi{flex:1}
+/* ===== 菜单文字 17px 微软雅黑 ===== */
+.menu .txt{font-size:17px;font-family:"微软雅黑",sans-serif;font-weight:500}
+
+/* ==================== 右侧内容区：数据概览页 ==================== */
+/* ===== 内容区：让出 272px 侧边栏 ===== */
+.content{margin-left:272px;padding:28px 0 40px}
+/* ===== 居中容器 1288px ===== */
+.container-center{width:1288px;margin:0 auto;padding:0 32px}
+/* ===== 页签行（本页无大标题，页签直接置顶） ===== */
+.pg-tabs{display:flex;align-items:flex-end;gap:28px}
+/* ===== 页签：灰字，a 链接去掉下划线 ===== */
+.ptab{position:relative;padding-bottom:12px;font-size:15px;color:#5a5a5a;cursor:pointer;text-decoration:none}
+/* ===== 当前页签：黑字加粗 + ::after 黑色下划线 ===== */
+.ptab.active{color:rgba(0,0,0,.9);font-weight:600}
+.ptab.active::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:#1a1a1a;border-radius:2px}
+/* ===== 使用指南：蓝字靠右 ===== */
+.guide{margin-left:auto;color:#4c84ff;font-size:14px;cursor:pointer}
+/* ===== 统计卡行：两张卡并排，间距 24px ===== */
+.ov-top{display:flex;gap:24px;margin-top:20px}
+/* ===== 统计卡：白底圆角 ===== */
+.ov-card{flex:1;background:#fff;border-radius:12px;padding:22px 28px 28px}
+/* ===== 卡头：标题左、日期区间右 ===== */
+.ov-head{display:flex;align-items:center}
+.ov-title{font-size:15px;font-weight:600;color:rgba(0,0,0,.9)}
+/* ===== 日期区间框：固定 244×38，紧接搜索框（间距 16px），内含起止日期 + 日历图标 ===== */
+/* ===== 日期区间框：内含两个可点击的日期 + 「至」+ 日历图标 ===== */
+.drange{display:flex;align-items:center;gap:6px;width:244px;height:38px;border:1px solid #e5e5e5;border-radius:6px;padding:0 10px;font-size:14px;color:rgba(0,0,0,.9)}
+/* ===== 统计卡头部：日期框推到最右（筛选行里的保持紧跟搜索框） ===== */
+.ov-head .drange{margin-left:auto}
+/* ===== 单个日期：原生日期输入，去边框透明底，整块可点开日历 ===== */
+.dt{position:relative;width:92px;border:none;background:transparent;padding:0;font-size:14px;font-family:inherit;color:rgba(0,0,0,.9);outline:none;cursor:pointer}
+/* ===== 把原生日历按钮铺满整个输入框并隐藏，点哪都能弹出日历 ===== */
+.dt::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+/* ===== 起止日期之间的「至」 ===== */
+.sep{font-size:13px;color:#b5b5b5;flex:none}
+.drange svg{width:14px;height:14px;color:#9a9a9a}
+/* ===== 统计网格：3 列 / 2 列两种，行间距 26px，全部居中 ===== */
+.ov-grid{display:grid;margin-top:20px;row-gap:20px}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+/* ===== 指标块：180×70，标签在上、数值在下 ===== */
+.ov-item{height:70px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:space-between}
+/* ===== 基础数据区（g3）六项文字改用微软雅黑 ===== */
+.ov-grid.g3 .ov-item{font-family:"微软雅黑","Microsoft YaHei",sans-serif}
+/* ===== 指标标签：13px 灰字，? 图标 12px ===== */
+.ov-item .lb{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:#8a8a8a}
+.ov-item .lb svg{width:12px;height:12px;color:#b5b5b5}
+/* ===== 指标数值：24px 常规字重，行高 34px ===== */
+.ov-item .val{font-size:24px;line-height:34px;font-weight:350;color:rgba(0,0,0,.9)}
+/* ===== 收入数据区（g2）四项数值单独加粗 ===== */
+.ov-grid.g2 .ov-item .val{font-size: 22px; font-weight: 500; color: #1D2129; letter-spacing: 0.2px; font-variant-numeric: tabular-nums;line-height: 1.4;}
+/* ===== 按建议做的验证规则：强制 700 + 微软雅黑（用来判断是字体缺字重还是选择器没命中） ===== */
+.ov-grid.g2 .ov-item .val{font-weight:700 !important;font-family:"Microsoft YaHei",sans-serif}
+/* ===== 收入数据区（g2）四项文字单独改字体（微软雅黑） ===== */
+.ov-grid.g2 .ov-item{font-family:"阿里巴巴普惠体","Microsoft YaHei",sans-serif}
+/* ===== 单条剧集数据卡 ===== */
+.list-card{background:#fff;border-radius:12px;margin-top:24px;padding:24px}
+.lc-title{font-size:16px;font-weight:600;color:rgba(0,0,0,.9)}
+/* ===== 筛选行：搜索 242 + 间距 16 + 日期 244 = 502，整体高 40（与原站一致） ===== */
+.filters{display:flex;align-items:center;gap:16px;margin-top:16px}
+.search{position:relative;width:242px}
+.search input{width:100%;height:40px;border:1px solid #e5e5e5;border-radius:8px;padding:0 34px 0 12px;font-size:14px;color:#333;outline:none;background:#fff}
+.search input::placeholder{color:#b5b5b5}
+.search svg{position:absolute;right:10px;top:11px;width:17px;height:17px;color:#b5b5b5}
+/* ===== 下载数据：蓝字推到最右 ===== */
+.download{margin-left:auto;color:#4c84ff;font-size:13px;cursor:pointer}
+/* ===== 表格外壳：横向滚动（原站列宽大，需要左右滚动） ===== */
+.twrap{overflow-x:auto;margin-top:8px}
+/* ===== 表格内层：300 + 7×180 + 76 + 76 + 90 = 1792 ===== */
+.tinner{min-width:1792px}
+/* ===== 表头/数据行共用同一组固定列宽（与原站 th 180px 一致） ===== */
+.thead,.trow{display:grid;grid-template-columns:300px repeat(7,180px) 76px 76px 90px;align-items:center}
+/* ===== 每个单元格左右内边距 16px（与原站 padding 12px 16px 一致） ===== */
+.thead > *,.trow > *{padding-left:16px;padding-right:16px}
+/* ===== 表头：高 51px，浅灰底 #FAFAFA，14px 灰字 ===== */
+.thead{height:51px;background:#FAFAFA;font-size:14px;color:#8a8a8a}
+.th-c{text-align:center}
+.th-r{text-align:right}
+/* ===== 表头小图标列（♡/👍）：灰色居中 ===== */
+.th-ic{display:flex;align-items:center;justify-content:center}
+.th-ic svg{width:15px;height:15px;color:#8a8a8a}
+/* ===== 数据行：上下内边距 16px（行高 64+32≈97），分割线，最后一行去掉 ===== */
+.trow{padding:16px 0;border-bottom:1px solid #f2f2f2;align-items:flex-start}
+.trow:last-child{border-bottom:none}
+/* ===== 剧集单元格：64×64 海报 + 名称/日期纵向，整体顶部对齐 ===== */
+.d-cell{display:flex;align-items:flex-start;gap:12px}
+/* ===== 海报缩略图：64×64 圆角，素材2 图片等比裁切填满 ===== */
+.poster{width:64px;height:64px;border-radius:4px;flex:none;object-fit:cover;display:block;background:#1c1713}
+.d-name{font-size:14px;color:#333}
+.d-date{font-size:12px;color:#9a9a9a;margin-top:4px}
+/* ===== 居中数值列：14px 黑字，行高 20px（与原站 media-count 一致） ===== */
+.c{text-align:center;font-size:14px;line-height:20px;color:rgba(0,0,0,.9)}
+/* ===== 右对齐数值列（金额列）：14px 黑字，行高 20px ===== */
+.r{text-align:right;font-size:14px;line-height:20px;color:rgba(0,0,0,.9)}
+/* ===== 操作列：蓝色「详情」靠右；整列吸右，横向滚动时始终可见 ===== */
+.ops{display:flex;justify-content:flex-end;position:sticky;right:0;z-index:2;background:#fff}
+/* ===== 表头「操作」同样吸右，底色随表头浅灰 ===== */
+.thead > :last-child{position:sticky;right:0;z-index:2;background:#FAFAFA}
+.ops span{color:#4c84ff;font-size:14px;cursor:pointer}
+/* ===== 分页：居中横排，当前页橙色，跳至橙色 ===== */
+.pager{display:flex;align-items:center;justify-content:center;gap:10px;padding:26px 0 4px;font-size:13px;color:#5a5a5a}
+.pg-arrow{width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9a9a9a}
+.pg-arrow svg{width:14px;height:14px}
+.pg-num{min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer}
+.pg-num.on{color:#ea9130;font-weight:600}
+.pg-input{width:44px;height:28px;border:1px solid #e5e5e5;border-radius:4px;text-align:center;font-size:13px;color:#333;outline:none}
+.pg-jump{color:#ea9130;cursor:pointer}
+/* ===== 页脚：链接左、版权右 ===== */
+.page-footer{display:flex;align-items:center;padding:30px 0 34px;font-size:13px;color:#9a9a9a}
+.f-links{display:flex;gap:36px}
+.f-links a{color:#9a9a9a;cursor:pointer;text-decoration:none}
+.f-copy{margin-left:auto}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo-wrap">
+    <div class="logo">
+      <img src="../素材/01_视频号logo.png" alt="视频号">
+      <span class="name">视频号 · 助手</span>
+    </div>
+  </div>
+
+  <nav class="menu">
+    <!-- 首页：回到主页 -->
+    <a class="mi" href="../视频号.html">
+      <img class="ic" src="../素材/02_首页_房子.png" alt="">
+      <span class="txt">首页</span>
+    </a>
+
+    <!-- 内容管理：7 个子项 -->
+    <details class="grp" name="sec">
+    <summary class="mi sub">
+      <img class="ic" src="../素材/03_内容管理_播放框.png" alt="">
+      <span class="txt">内容管理</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="sub-list">
+      <label class="si"><input class="nr" type="radio" name="nav">视频</label>
+      <label class="si"><input class="nr" type="radio" name="nav">图文</label>
+      <label class="si"><input class="nr" type="radio" name="nav">音乐</label>
+      <label class="si"><input class="nr" type="radio" name="nav">音频</label>
+      <label class="si"><input class="nr" type="radio" name="nav">草稿箱</label>
+      <label class="si"><input class="nr" type="radio" name="nav">主页</label>
+      <label class="si"><input class="nr" type="radio" name="nav">活动</label>
+    </div>
+    </details>
+
+    <!-- 互动管理：3 个子项 -->
+    <details class="grp" name="sec">
+    <summary class="mi sub">
+      <img class="ic" src="../素材/04_互动管理_气泡.png" alt="">
+      <span class="txt">互动管理</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="sub-list">
+      <label class="si"><input class="nr" type="radio" name="nav">评论</label>
+      <label class="si"><input class="nr" type="radio" name="nav">弹幕</label>
+      <label class="si"><input class="nr" type="radio" name="nav">私信</label>
+    </div>
+    </details>
+
+    <!-- 直播：5 个子项 -->
+    <details class="grp" name="sec">
+    <summary class="mi sub">
+      <img class="ic" src="../素材/05_直播_靶心.png" alt="">
+      <span class="txt">直播</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="sub-list">
+      <label class="si"><input class="nr" type="radio" name="nav">直播管理</label>
+      <label class="si"><input class="nr" type="radio" name="nav">直播商品管理</label>
+      <label class="si"><input class="nr" type="radio" name="nav">直播收入</label>
+      <label class="si"><input class="nr" type="radio" name="nav">直播预告</label>
+      <label class="si"><input class="nr" type="radio" name="nav">直播回放</label>
+    </div>
+    </details>
+
+    <!-- 收入与服务：默认展开，「剧集管理」橙色选中 -->
+    <details class="grp" name="sec" open>
+    <summary class="mi sub">
+      <img class="ic" src="../素材/06_收入与服务_人民币.png" alt="">
+      <span class="txt">收入与服务</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="sub-list">
+      <label class="si"><input class="nr" type="radio" name="nav">收入权益</label>
+      <label class="si"><input class="nr" type="radio" name="nav">原创保护记录</label>
+      <label class="si"><input class="nr" type="radio" name="nav">加热工具</label>
+      <label class="si"><input class="nr" type="radio" name="nav" checked>剧集管理</label>
+    </div>
+    </details>
+
+    <!-- 带货中心：单项 -->
+    <label class="mi">
+      <input class="nr" type="radio" name="nav">
+      <img class="ic" src="../素材/07_带货中心_帽子.png" alt="">
+      <span class="txt">带货中心</span>
+    </label>
+
+    <!-- 数据中心：5 个子项 -->
+    <details class="grp" name="sec">
+    <summary class="mi sub">
+      <img class="ic" src="../素材/08_数据中心_柱状图.png" alt="">
+      <span class="txt">数据中心</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="sub-list">
+      <label class="si"><input class="nr" type="radio" name="nav">关注者数据</label>
+      <label class="si"><input class="nr" type="radio" name="nav">视频数据</label>
+      <label class="si"><input class="nr" type="radio" name="nav">图文数据</label>
+      <label class="si"><input class="nr" type="radio" name="nav">直播数据</label>
+      <label class="si"><input class="nr" type="radio" name="nav">带货数据</label>
+    </div>
+    </details>
+
+    <!-- 设置：3 个子项 -->
+    <details class="grp" name="sec">
+    <summary class="mi sub">
+      <img class="ic" src="../素材/09_设置_齿轮.png" alt="">
+      <span class="txt">设置</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="sub-list">
+      <label class="si"><input class="nr" type="radio" name="nav">人员设置</label>
+      <label class="si"><input class="nr" type="radio" name="nav">自营账户管理</label>
+      <label class="si"><input class="nr" type="radio" name="nav">肖像授权管理</label>
+    </div>
+    </details>
+  </nav>
+
+  <div class="spacer"></div>
+  <div class="bottom">
+    <label class="mi">
+      <input class="nr" type="radio" name="nav">
+      <img class="ic" src="../素材/10_通知中心_铃铛.png" alt="">
+      <span class="txt">通知中心</span>
+      <span class="badge">202</span>
+    </label>
+    <label class="mi">
+      <input class="nr" type="radio" name="nav">
+      <span class="avatar"></span>
+      <span class="txt">柚静剧场</span>
+      <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+    </label>
+  </div>
+</aside>
+
+<main class="content">
+<div class="container-center">
+  <!-- 页签：剧集发表（可跳回剧集管理）/ 数据概览（当前）/ 收入详情 -->
+  <div class="pg-tabs">
+    <a class="ptab" href="../剧集管理链接.html">剧集发表</a>
+    <span class="ptab active">数据概览</span>
+    <span class="ptab">收入详情</span>
+    <span class="guide">使用指南</span>
+  </div>
+
+  <!-- 两张统计卡 -->
+  <div class="ov-top">
+    <div class="ov-card">
+      <div class="ov-head">
+        <span class="ov-title">基础数据</span>
+        <span class="drange"><input class="dt" type="date" value="2026-10-20"><span class="sep">至</span><input class="dt" type="date" value="2026-11-18"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></span>
+      </div>
+      <div class="ov-grid g3">
+        <div class="ov-item"><span class="lb">上架短剧数</span><span class="val">10</span></div>
+        <div class="ov-item"><span class="lb">发表自主挂载视频数</span><span class="val">0</span></div>
+        <div class="ov-item"><span class="lb">发表CPS挂载视频数</span><span class="val">0</span></div>
+        <div class="ov-item"><span class="lb">剧集播放量</span><span class="val">17.6万</span></div>
+        <div class="ov-item"><span class="lb">自主挂载播放量</span><span class="val">88.3万</span></div>
+        <div class="ov-item"><span class="lb">CPS挂载播放量</span><span class="val">0</span></div>
+      </div>
+    </div>
+    <div class="ov-card">
+      <div class="ov-head">
+        <span class="ov-title">收入数据</span>
+        <span class="drange"><input class="dt" type="date" value="2026-10-20"><span class="sep">至</span><input class="dt" type="date" value="2026-11-18"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></span>
+      </div>
+      <div class="ov-grid g2">
+        <div class="ov-item"><span class="lb">剧集总收入</span><span class="val">¥65,983.47</span></div>
+        <div class="ov-item"><span class="lb">剧集广告变现收入</span><span class="val">¥24,611.84</span></div>
+        <div class="ov-item"><span class="lb">剧集集均收入<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5"/><line x1="12" y1="16.8" x2="12" y2="16.9"/></svg></span><span class="val">¥6,598.35</span></div>
+        <div class="ov-item"><span class="lb">所选范围扣除收入<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5"/><line x1="12" y1="16.8" x2="12" y2="16.9"/></svg></span><span class="val">¥2,226.61</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 单条剧集数据 -->
+  <div class="list-card">
+    <div class="ov-head"><span class="ov-title">单条剧集数据</span></div>
+    <div class="filters">
+      <div class="search"><input placeholder="搜索剧名"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.5" y2="16.5"/></svg></div>
+      <span class="drange"><input class="dt" type="date" value="2026-10-20"><span class="sep">至</span><input class="dt" type="date" value="2026-11-18"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></span>
+      <span class="download">下载数据</span>
+    </div>
+    <div class="twrap">
+      <div class="tinner">
+        <!-- 11 列表头 -->
+        <div class="thead">
+          <span>剧集名</span>
+          <span class="th-c">发表自主挂载视频数</span>
+          <span class="th-c">剧集播放量</span>
+          <span class="th-c">自主挂载播放量</span>
+          <span class="th-r">剧集总收入</span>
+          <span class="th-r">广告变现收入</span>
+          <span class="th-r">剧集激励收入</span>
+          <span class="th-r">违规扣除收入</span>
+          <span class="th-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>
+          <span class="th-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.3a2 2 0 0 0 2-1.7l1.4-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg></span>
+          <span class="th-r">操作</span>
+        </div>
+
+        <!-- 10 部剧集数据（数值按用户提供的表格） -->
+        <div class="trow">
+          <div class="d-cell"><img class="poster" src="../素材2/e9281c3da356fe9d6d9361bf9945ead5.jpg" alt=""><div class="d-name">每天都有进账第2季</div></div>
+          <span class="c">0</span>
+          <span class="c">1.2万</span>
+          <span class="c">0</span>
+          <span class="r">¥4,750.81</span>
+          <span class="r">¥1,772.05</span>
+          <span class="r">¥2,978.76</span>
+          <span class="r">¥0.00</span>
+          <span class="c">0</span>
+          <span class="c">0</span>
+          <div class="ops"><span>详情</span></div>
+        </div>
+        <div class="trow">
+          <div class="d-cell"><img class="poster" src="../素材2/2ae01b7f0d5d9ba7c6062954a7adca1d.jpg" alt=""><div class="d-name">每天都有进账</div></div>
+          <span class="c">0</span>
+          <span class="c">1.4万</span>
+          <span class="c">0</span>
+          <span class="r">¥5,608.59</span>
+          <span class="r">¥2,092.01</span>
+          <span class="r">¥3,516.59</span>
+          <span class="r">¥0.00</span>
+          <span class="c">0</span>
+          <span class="c">0</span>
+          <div class="ops"><span>详情</span></div>
+        </div>
+        <div class="trow">
+          <div class="d-cell"><img class="poster" src="../素材2/c120c44b5d54c45b0b0724c0916ab14f.jpg" alt=""><div class="d-name">每天进账一亿</div></div>
+          <span class="c">0</span>
+          <span class="c">1.9万</span>
+          <span class="c">0</span>
+          <span class="r">¥7,258.18</span>
+          <span class="r">¥2,707.30</span>
+          <span class="r">¥4,550.88</span>
+          <span class="r">¥0.00</span>
+          <span class="c">0</span>
+          <span class="c">0</span>
+          <div class="ops"><span>详情</span></div>
+        </div>
+        <div class="trow">
+          <div class="d-cell"><img class="poster" src="../素材2/e006f79e93d4b75d5b4b6083b104f56e.jpg" alt=""><div class="d-name">穿书后我疯狂洗白第4季</div></div>
+          <span class="c">0</span>
+          <span class="c">2.2万</span>
+          <span class="c">0</span>
+          <span class="r">¥8,247.93</span>
+          <span class="r">¥3,076.48</span>
+          <span class="r">¥5,171.45</span>
+          <span class="r">¥0.00</span>
+          <span class="c">0</span>
+          <span class="c">0</span>
+          <div class="ops"><span>详情</span></div>
+        </div>
+        <div class="trow">
+          <div class="d-cell"><img class="poster" src="../素材2/22e8ee24b6716e7af55c7232f0bbb8ee.jpg" alt=""><div class="d-name">穿书后我疯狂洗白第2季</div></div>
+          <span class="c">0</span>
+          <span class="c">1.6万</span>
+          <span class="c">0</span>
+          <span class="r">¥6,268.43</span>
+          <span class="r">¥2,338.12</span>
+          <span class="r">¥3,930.31</span>
+          <span class="r">¥0.00</span>
+          <span class="c">0</span>
+          <span class="c">0</span>
+          <div class="ops"><span>详情</span></div>
+        </div>
+        <div class="trow">
+          <div class="d-cell"><img class="poster" src="../素材2/861806dacec3aa51369dffad19c25118.jpg" alt=""><div class="d-name">穿书后我疯狂洗白3</div></div>
+          <span class="c">0</span>
+          <span class="c">1.8万</span>
+          <span class="c">0</span>
+          <span class="r">¥6,928.26</span>
+          <span class="r">¥2,584.24</span>
+          <span class="r">¥4,344.02</span>
+          <span class="r">¥0.00</span>
+          <span class="c">0</span>
+          <span class="c">0</span>
+          <div class="ops"><span>详情</span></div>
+        </div>
+        <div class="trow">
+          <div class="d-cell"><img class="poster" src="../素材2/e476800db2b49cb2837ac8e91dd61fb8.jpg" alt=""><div class="d-name">穿书后我疯狂洗白2</div></div>
+          <span class="c">0</span>
+          <span class="c">2.2万</span>
+          <span class="c">0</span>
+          <span class="r">¥8,577.85</span>
+          <span class="r">¥3,199.54</span>
+          <span class="r">¥5,378.31</span>
+          <span class="r">¥0.00</span>
+          <span class="c">0</span>
+          <span class="c">0</span>
+          <div class="ops"><span>详情</span></div>
+        </div>
+        <div class="trow">
+          <div class="d-cell"><img class="poster" src="../素材2/e9281c3da356fe9d6d9361bf9945ead5.jpg" alt=""><div class="d-name">穿书后我疯狂洗白</div></div>
+          <span class="c">0</span>
+          <span class="c">1.4万</span>
+          <span class="c">0</span>
+          <span class="r">¥5,278.68</span>
+          <span class="r">¥1,968.95</span>
+          <span class="r">¥3,309.73</span>
+          <span class="r">¥0.00</span>
+          <span class="c">0</span>
+          <span class="c">0</span>
+          <div class="ops"><span>详情</span></div>
+        </div>
+        <div class="trow">
+          <div class="d-cell"><img class="poster" src="../素材2/2ae01b7f0d5d9ba7c6062954a7adca1d.jpg" alt=""><div class="d-name">我带萌宝装穷认亲</div></div>
+          <span class="c">0</span>
+          <span class="c">2万</span>
+          <span class="c">0</span>
+          <span class="r">¥7,588.10</span>
+          <span class="r">¥2,830.36</span>
+          <span class="r">¥4,757.74</span>
+          <span class="r">¥0.00</span>
+          <span class="c">0</span>
+          <span class="c">0</span>
+          <div class="ops"><span>详情</span></div>
+        </div>
+        <div class="trow">
+          <div class="d-cell"><img class="poster" src="../素材2/c120c44b5d54c45b0b0724c0916ab14f.jpg" alt=""><div class="d-name">重生搞事业嫁良人</div></div>
+          <span class="c">0</span>
+          <span class="c">1.4万</span>
+          <span class="c">0</span>
+          <span class="r">¥5,476.63</span>
+          <span class="r">¥2,042.78</span>
+          <span class="r">¥3,433.85</span>
+          <span class="r">¥0.00</span>
+          <span class="c">0</span>
+          <span class="c">0</span>
+          <div class="ops"><span>详情</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 分页 -->
+    <div class="pager">
+      <span class="pg-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg></span>
+      <span class="pg-num on">1</span>
+      <span class="pg-num">2</span>
+      <span class="pg-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span>
+      <input class="pg-input" value="1">
+      <span class="pg-jump">跳转</span>
+    </div>
+  </div>
+
+  <!-- 页脚 -->
+  <div class="page-footer">
+    <div class="f-links">
+      <a href="#">关于腾讯</a>
+      <a href="#">微信视频号运营规范</a>
+      <a href="#">问题咨询</a>
+    </div>
+    <span class="f-copy">© 1998-2026 Tencent Inc. All Rights Reserved.</span>
+  </div>
+</div>
+</main>
+</body>
+</html>
